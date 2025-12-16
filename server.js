@@ -40,14 +40,18 @@ app.post('/api/v1/employment/verify', async (req, res) => {
 
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Log the request
-    await supabase.from('api_requests').insert({
+    // Log the request (non-blocking)
+    supabase.from('api_requests').insert({
       customer_id: 'employer_com',
       endpoint: '/api/v1/employment/verify',
       method: 'POST',
       status_code: 200,
       response_time_ms: 0,
-    }).catch(() => {});
+    }).then(() => {
+      console.log(`Request ${requestId} logged`);
+    }).catch((err) => {
+      console.error('Logging error:', err);
+    });
 
     return res.status(200).json({
       request_id: requestId,
