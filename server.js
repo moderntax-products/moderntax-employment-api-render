@@ -485,9 +485,3 @@ app.get('/api/v1/employment/status/:requestId', async (req, res) => {
 
 
 // Start server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ Backend API running on port ${PORT}`);
-  console.log(`🔐 Expert authentication enabled`);
-  console.log(`📊 Supabase: ${supabaseUrl}`);
-});
