@@ -416,3 +416,70 @@ app.listen(PORT, () => {
   console.log(`🔐 Expert authentication enabled`);
   console.log(`📊 Supabase: ${supabaseUrl}`);
 });
+
+// ============================================
+// EMPLOYMENT STATUS - Query Supabase
+// ============================================
+
+app.get('/api/v1/employment/status/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const token = req.headers.authorization?.split('Bearer ')[1];
+
+    // Validate token
+    if (!token || (token !== 'mt_live_emp_employercom_prod' && token !== 'mt_sandbox_emp_employercom_test123')) {
+      return res.status(401).json({ 
+        error: 'Invalid API key',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Query Supabase employment_requests table
+    const { data, error } = await supabase
+      .from('employment_requests')
+      .select('request_id, status, employment_data, irs_retrieved_at, total_employers, multi_employer_detected, years')
+      .eq('request_id', requestId)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ 
+        error: 'Request not found',
+        request_id: requestId,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Build response - NO PII exposed
+    const response = {
+      request_id: data.request_id,
+      status: data.status,
+      timestamp: new Date().toISOString()
+    };
+
+    // If completed, return employment summary
+    if (data.status === 'completed') {
+      response.employment_verification = {
+        employment_status: 'active',
+        total_employers: data.total_employers,
+        multi_employer_detected: data.multi_employer_detected,
+        employment_history: data.employment_data?.employment_history || [],
+        total_w2_income: data.employment_data?.total_w2_income || 0
+      };
+      response.completed_at = data.irs_retrieved_at;
+    } else if (data.status === 'pending_irs_call') {
+      response.message = 'Request received. Processing with IRS. Check back in 24-48 hours.';
+      response.tax_years = data.years || [];
+    }
+
+    return res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Employment status error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error', 
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
