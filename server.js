@@ -462,8 +462,8 @@ app.get('/api/v1/employment/status/:requestId', async (req, res) => {
         employment_status: 'active',
         total_employers: data.total_employers,
         multi_employer_detected: data.multi_employer_detected,
-        employment_history: data.employment_data?.employment_history || [],
-        total_w2_income: data.employment_data?.total_w2_income || 0
+        employment_history: data.employment_data || {},
+        total_w2_income: data.employment_data ? Object.values(data.employment_data).reduce((sum, year) => sum + (year.w2_total || 0), 0) : 0
       };
       response.completed_at = data.irs_retrieved_at;
     } else if (data.status === 'pending_irs_call') {
